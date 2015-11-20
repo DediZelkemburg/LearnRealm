@@ -16,7 +16,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewStub;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.dedi.learnrealm.Models.Adapter;
@@ -52,13 +55,21 @@ public class MainActivity extends AppCompatActivity
 
     ListView listView;
     Adapter adapter;
+    ProgressDialog progressDialog;
+
+    ViewStub vsListData, vsAddData;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         //((ViewStub) findViewById(R.id.vs_add_data)).setVisibility(View.VISIBLE);
-        ((ViewStub) findViewById(R.id.list_data)).setVisibility(View.VISIBLE);
+        //((ViewStub) findViewById(R.id.list_data)).setVisibility(View.VISIBLE);
+        vsListData = (ViewStub) findViewById(R.id.list_data);
+        vsAddData = (ViewStub) findViewById(R.id.vs_add_data);
+
+        vsListData.setVisibility(View.VISIBLE);
+
         listView = (ListView) findViewById(R.id.list);
 
 
@@ -86,15 +97,14 @@ public class MainActivity extends AppCompatActivity
         /** Realm insert and get data With callback **/
         realm = Realm.getInstance(getApplicationContext()); // declare realm first time
 
-        final ProgressDialog progressDialog = new ProgressDialog(MainActivity.this);
+        progressDialog = new ProgressDialog(MainActivity.this);
         progressDialog.setMessage("waiting");
-        progressDialog.setMax(10);
         progressDialog.show();
         realm.executeTransaction(new Realm.Transaction() {
             public void execute(Realm realms) { //not UI
 
                 /** Realm for insert **/
-                /*for (int i=0; i<500; i++) {
+                /*for (int i=0; i<10000; i++) {
                     Users us = realms.createObject(Users.class);
                     us.setId(""+i);
                     us.setPass("taratas "+i);
@@ -170,6 +180,8 @@ public class MainActivity extends AppCompatActivity
                 /*results_.remove(position);
                 results_.removeLast();*/
 
+                getData();
+
 
             }
         });
@@ -216,15 +228,46 @@ public class MainActivity extends AppCompatActivity
 
         /**  REALM for UPDATE **/
 
-        Users user = new Users();
+        /*Users user = new Users();
         user.setId("3");
         user.setName("Dedi Dorez");
 
         realm.beginTransaction();
         realm.copyToRealmOrUpdate(user);
-        realm.commitTransaction();
+        realm.commitTransaction();*/
 
         /** END REALM for UPDATE **/
+
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                vsAddData.setVisibility(View.VISIBLE);
+                vsListData.setVisibility(View.GONE);
+                results_ = realm.where(Users.class).findAll();
+                ((EditText) findViewById(R.id.username)).setText(results_.get(position).getName());
+                ((EditText) findViewById(R.id.password)).setText(results_.get(position).getPass());
+
+                ((TextView) findViewById(R.id.btn_add)).setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        Users userUpdate = new Users();
+                        userUpdate.setId(results_.get(position).getId());
+
+                        userUpdate.setName(((EditText) findViewById(R.id.username)).getText().toString());
+                        userUpdate.setPass(((EditText) findViewById(R.id.password)).getText().toString());
+
+                        realm.beginTransaction();
+                        realm.copyToRealmOrUpdate(userUpdate);
+                        realm.commitTransaction();
+
+                        getData();
+
+
+                    }
+                });
+
+                return true;
+            }
+        });
 
 
     }
@@ -251,6 +294,40 @@ public class MainActivity extends AppCompatActivity
         /*results = realm.where(Users.class).findAllAsync();
         results.addChangeListener(callback);*/
         /** END Realm get data With AsyncTask declare 2**/
+    }
+
+    private void getData() { /** Merefresh data kembali **/
+        progressDialog.show();
+        user = new ArrayList<>();
+        realm.executeTransaction(new Realm.Transaction() {
+            public void execute(Realm realms) { //not UI
+
+                /** Realm for get all data/delete use query **/
+                query = realms.where(Users.class);
+                //RealmResults<Users> results = query.findAll();
+                results_ = query.findAll();
+                for (int i = 0; i < results_.size(); i++) {
+                    Users us = new Users();
+                    us.setName(results_.get(i).getId());
+                    us.setPass(results_.get(i).getName());
+                    user.add(us);
+                }
+                adapter = new Adapter(MainActivity.this, user);
+                /** END Realm for get all data/delete use query **/
+
+            }
+        }, new Realm.Transaction.Callback() {
+            public void onSuccess() {
+                Toast.makeText(getApplicationContext(), "Successfully ", Toast.LENGTH_SHORT).show();
+                listView.setAdapter(adapter);
+                progressDialog.dismiss();
+            }
+
+            public void onError(Exception e) {
+                Toast.makeText(getApplicationContext(), "Error " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                progressDialog.dismiss();
+            }
+        });
     }
 
     public void onClickSave(View v) {
@@ -287,15 +364,15 @@ public class MainActivity extends AppCompatActivity
 
         if (id == R.id.nav_camara) {
 
+            getData();
+            vsListData.setVisibility(View.VISIBLE);
+            vsAddData.setVisibility(View.GONE);
+
+
         } else if (id == R.id.nav_gallery) {
 
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+            vsListData.setVisibility(View.GONE);
+            vsAddData.setVisibility(View.VISIBLE);
 
         }
 

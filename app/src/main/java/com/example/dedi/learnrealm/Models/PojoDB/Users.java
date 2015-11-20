@@ -16,8 +16,6 @@ public class Users extends RealmObject {
     private String name;
     private String pass;
 
-
-
     public String getId() {
         return id;
     }
