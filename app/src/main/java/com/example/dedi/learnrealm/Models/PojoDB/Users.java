@@ -1,6 +1,7 @@
 package com.example.dedi.learnrealm.Models.PojoDB;
 
 import io.realm.RealmObject;
+import io.realm.annotations.Index;
 import io.realm.annotations.PrimaryKey;
 import io.realm.annotations.Required;
 
@@ -10,17 +11,20 @@ import io.realm.annotations.Required;
 public class Users extends RealmObject {
 
     @PrimaryKey
-    private String id;
+    private int id;
+
+    /*@Index
+    private String a;*/
 
     @Required
     private String name;
     private String pass;
 
-    public String getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(int id) {
         this.id = id;
     }
 

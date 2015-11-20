@@ -27,6 +27,7 @@ import com.example.dedi.learnrealm.Models.PojoDB.Users;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
@@ -37,6 +38,8 @@ import io.realm.RealmResults;
  * Ada 2 cara dalam menampilkan data pada realm
  * 1. RealmQuery  query ( query = realms.where(Users.class); RealmResults = query ..... )
  * 2. Langsung Realm realm ( RealmResults = realm.where(Users.class).findAll(); )
+ * random uuid model.setId(UUID.randomUUID().toString());
+ * // increatement index => int nextID = (int) (realm.where(dbObj.class).maximumInt("id") + 1) ;
  **/
 
 public class MainActivity extends AppCompatActivity
@@ -104,9 +107,9 @@ public class MainActivity extends AppCompatActivity
             public void execute(Realm realms) { //not UI
 
                 /** Realm for insert **/
-                /*for (int i=0; i<10000; i++) {
+                /*for (int i=1; i<500; i++) {
                     Users us = realms.createObject(Users.class);
-                    us.setId(""+i);
+                    us.setId(i);
                     us.setPass("taratas "+i);
                     us.setName("turutut "+i);
                 }*/
@@ -118,8 +121,8 @@ public class MainActivity extends AppCompatActivity
                 results_ = query.findAll();
                 for (int i = 0; i < results_.size(); i++) {
                     Users us = new Users();
-                    us.setName(results_.get(i).getId());
-                    us.setPass(results_.get(i).getName());
+                    us.setName(results_.get(i).getName() + " | " + results_.get(i).getId());
+                    us.setPass(results_.get(i).getPass());
                     user.add(us);
                 }
                 adapter = new Adapter(MainActivity.this, user);
@@ -153,7 +156,9 @@ public class MainActivity extends AppCompatActivity
 
                 /** without executeTransaction **/
                 realm.beginTransaction();
-                results_ = realm.where(Users.class).findAll();
+                //results_ = realm.where(Users.class).findAll();
+                query = realm.where(Users.class);
+                results_ = query.findAllSorted("id", RealmResults.SORT_ORDER_DESCENDING);
                 results_.remove(position);
                 realm.commitTransaction();
                 /** END without executeTransaction **/
@@ -243,12 +248,13 @@ public class MainActivity extends AppCompatActivity
             public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
                 vsAddData.setVisibility(View.VISIBLE);
                 vsListData.setVisibility(View.GONE);
-                results_ = realm.where(Users.class).findAll();
+                results_ = realm.where(Users.class).findAllSorted("id", RealmResults.SORT_ORDER_DESCENDING);
                 ((EditText) findViewById(R.id.username)).setText(results_.get(position).getName());
                 ((EditText) findViewById(R.id.password)).setText(results_.get(position).getPass());
 
                 ((TextView) findViewById(R.id.btn_add)).setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
+                        /**  Update  Data **/
                         Users userUpdate = new Users();
                         userUpdate.setId(results_.get(position).getId());
 
@@ -258,6 +264,7 @@ public class MainActivity extends AppCompatActivity
                         realm.beginTransaction();
                         realm.copyToRealmOrUpdate(userUpdate);
                         realm.commitTransaction();
+                        /** END Update  Data **/
 
                         getData();
 
@@ -305,11 +312,11 @@ public class MainActivity extends AppCompatActivity
                 /** Realm for get all data/delete use query **/
                 query = realms.where(Users.class);
                 //RealmResults<Users> results = query.findAll();
-                results_ = query.findAll();
+                results_ = query.findAllSorted("id", RealmResults.SORT_ORDER_DESCENDING);
                 for (int i = 0; i < results_.size(); i++) {
                     Users us = new Users();
-                    us.setName(results_.get(i).getId());
-                    us.setPass(results_.get(i).getName());
+                    us.setName(results_.get(i).getName() + " | " + results_.get(i).getId());
+                    us.setPass(results_.get(i).getPass());
                     user.add(us);
                 }
                 adapter = new Adapter(MainActivity.this, user);
@@ -373,6 +380,38 @@ public class MainActivity extends AppCompatActivity
 
             vsListData.setVisibility(View.GONE);
             vsAddData.setVisibility(View.VISIBLE);
+
+            /** Adding new Data **/
+            ((TextView) findViewById(R.id.btn_add)).setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+
+                    realm.executeTransaction(new Realm.Transaction() {
+                        public void execute(Realm realms) {
+                            AtomicInteger AI = new AtomicInteger(); //objek ini seperti auto increments
+                            results_ = realms.where(Users.class).findAllSorted("id", RealmResults.SORT_ORDER_DESCENDING);
+                            Users insert = realms.createObject(Users.class); // wajib declare this is for insert
+
+
+                            //insert.setId((int) realms.where(Users.class).maximumInt("id")+1); //depreaceted
+
+                            insert.setId(realms.where(Users.class).max("id").intValue() + 1);
+                            //insert.setId(AI.getAndIncrement());
+                            insert.setName(((EditText) findViewById(R.id.username)).getText().toString());
+                            insert.setPass(((EditText) findViewById(R.id.password)).getText().toString());
+                        }
+                    }, new Realm.Transaction.Callback() {
+                        public void onSuccess() {
+                            Toast.makeText(getApplicationContext(), "sip dah ", Toast.LENGTH_SHORT).show();
+                        }
+
+                        public void onError(Exception e) {
+                            Toast.makeText(getApplicationContext(), "ora sip " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+                }
+            });
+            /** END Adding new Data **/
 
         }
 
